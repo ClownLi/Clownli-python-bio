@@ -140,13 +140,13 @@ rule send_email:
         from smtplib import SMTP_SSL
 
         host_server = 'smtp.qq.com'
-        sender_qq = '2275995884@qq.com'
-        pwd = 'nikmgpfytgzkebhf' ## xh**********bdc
-        sender_qq_mail = '2275995884@qq.com'
+        sender_qq = '22XXXXXXX84@qq.com'
+        pwd = 'xh**********bdc'
+        sender_qq_mail = '2XXXXXXXXXX4@qq.com'
         receiver = 'limingzhu0216@gmail.com'
 
-        mail_content = '运行完毕,骚年'
-        mail_title = 'God的邮件'
+        mail_content = "run over! my guys"
+        mail_title = "God's email~"
 
         smtp = SMTP_SSL(host_server)
         smtp.set_debuglevel(1)
