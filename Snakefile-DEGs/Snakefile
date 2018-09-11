@@ -1,0 +1,172 @@
+"""
+Author: LMZ
+Description: A simple Snakemake worlflow to process paired-end stranded RNA-Seq
+Date:2018-09-11
+
+"""
+DATA_DIR = "griffithlab_brain_vs_uhr/HBR_UHR_ERCC_ds_10pc/"
+GENOME_FA = "griffithlab_brain_vs_uhr/GRCh38_Ens87_chr22_ERCC/chr22_ERCC92.fa"
+GENOME_GTF = "griffithlab_brain_vs_uhr/GRCh38_Ens87_chr22_ERCC/genes_chr22_ERCC92.gtf"
+HISAT2_INDEX_PREFIX = "hisat2_index/chr22_ERCC92"
+
+SAMPLES, *_ = glob_wildcards(DATA_DIR + '/{sample}.read1.fastq.gz')
+
+rule all:
+    input:
+        "temp/msg.txt"
+
+rule extract_genome_splice_sites:
+    input:
+        GENOME_GTF
+    output:
+        "hisat2_index/extract.ss"
+    shell:
+        "hisat2_extract_splice_sites.py {input} > {output}"
+
+rule extract_genome_exons:
+    input: 
+        GENOME_GTF
+    output: 
+        "hisat2_index/extract.exon"
+    shell: 
+        "hisat2_extract_exons.py {input} > {output}"
+
+rule build_hisat_index:
+    input:
+        genome_fa=GENOME_FA,
+        splice_sites="hisat2_index/extract.ss",
+        exons="hisat2_index/extract.exon",
+    output: expand(f"{HISAT2_INDEX_PREFIX}.{{ix}}.ht2", ix=range(1, 9))
+    log: "hisat2_index/build.log"
+    threads: 8
+    shell:
+        "hisat2-build -p {threads} {input.genome_fa} "
+        "--ss {input.splice_sites} --exon {input.exons} {HISAT2_INDEX_PREFIX} "
+        "2>{log}"
+
+rule align_hisat:
+    input:
+        hisat2_index=expand(f"{HISAT2_INDEX_PREFIX}.{{ix}}.ht2", ix=range(1, 9)),
+        fastq1=DATA_DIR + "{sample}.read1.fastq.gz",
+        fastq2=DATA_DIR + "{sample}.read2.fastq.gz",
+    output: "align_hisat2/{sample}.bam"
+    log: "align_hisat2/{sample}.log"
+    threads: 4
+    shell:
+        "hisat2 -p {threads} --dta -x {HISAT2_INDEX_PREFIX} "
+        "-1 {input.fastq1} -2 {input.fastq2} 2>{log} | "
+        "samtools sort -@ {threads} -o {output}"
+
+rule align_all_samples:
+    input: expand("align_hisat2/{sample}.bam", sample=SAMPLES)
+
+rule htseq_count:
+    input:
+        gtf=GENOME_GTF,
+        bam="align_hisat2/{sample}.bam",
+    output:
+        "Count/{sample}_count.txt"
+    shell:
+        " htseq-count -f bam -i gene_id -s no -t exon {input.bam} {input.gtf} > {output}"
+
+rule add_ID:
+    input:
+        expand("Count/{sample}_count.txt",sample=SAMPLES)
+    output:
+        "Count/{sample}_count"
+    run:
+        def add_ID(file):
+            name = file.split('.')[0].split('/')[1].split('_')[0]
+            with open(file, 'r') as f:
+                content = f.read()
+                with open('Count/'+name+'_count','w') as f:
+                    f.seek(0, 0)
+                    f.write('GeneID\t'+name+'\n' + content)
+        for i in input:
+            add_ID(i)
+
+rule merge:
+    input:
+        expand("Count/{sample}_count",sample=SAMPLES)
+    output:
+        "temp/merge.txt"
+    run:
+        import os
+        mydict = {}
+        input.sort()
+        for file in input:
+            for line in open(file, 'r'):
+                key,value = line.strip().split('\t')
+                if key in mydict:
+                    mydict[key] = mydict[key] + '\t' + value
+                else:
+                    mydict[key] = value
+        
+        with open(output[0],'w+') as f:
+            for key,value in mydict.items():
+                f.write(key + '\t' + value +'\n')
+
+rule clean:
+    input:
+        "temp/merge.txt"
+    output:
+        "temp/result.txt"
+    run:
+        with open(input[0],'r') as f:
+            con = f.readlines()
+            new_content = con[:-5]
+            with open(output[0],'w') as f1:
+                for line in new_content:
+                    f1.write(line)
+
+rule DEG:
+    input:
+        "temp/result.txt"
+    output:
+        "Results/expression_boxplot.pdf"
+    shell:
+        "Rscript DESeq2_all.R temp/result.txt"
+
+
+rule send_email:
+    input:
+        "Results/expression_boxplot.pdf"
+    output:
+        "temp/msg.txt"
+    run:
+        import os
+        from email.mime.text import MIMEText
+        from email.header import Header
+        from smtplib import SMTP_SSL
+
+        host_server = 'smtp.qq.com'
+        sender_qq = '2275995884@qq.com'
+        pwd = 'nikmgpfytgzkebhf' ## xh**********bdc
+        sender_qq_mail = '2275995884@qq.com'
+        receiver = 'limingzhu0216@gmail.com'
+
+        mail_content = '运行完毕,骚年'
+        mail_title = 'God的邮件'
+
+        smtp = SMTP_SSL(host_server)
+        smtp.set_debuglevel(1)
+        smtp.ehlo(host_server)
+        smtp.login(sender_qq, pwd)
+
+        msg = MIMEText(mail_content, "plain", 'utf-8')
+        msg["Subject"] = Header(mail_title, 'utf-8')
+        msg["From"] = sender_qq_mail
+        msg["To"] = receiver
+        smtp.sendmail(sender_qq_mail, receiver, msg.as_string())
+        smtp.quit()
+
+        os.chdir("./Results")
+        file_search = input[0].split('/')[1] 
+        if file_search in os.listdir():
+            os.chdir('../')
+            with open(output[0],'w') as f:
+                f.write('successful~ baby!')
+        else:
+            os.chdir('../')
+            with open(output[0],'w') as f:
+                f.write('fail~ baby!')
