@@ -83,7 +83,6 @@ class BuildTree():
         if "SingleCopyOrthogroups.txt" in os.listdir():
             self._get_SingleID("SingleCopyOrthogroups.txt")
             self._get_SingleGeneSeq("Orthogroups.txt","../all.fas")
-        os.chdir("../")
 
     def _MSA_SingleCopyGene(self):
         os.mkdir("SingleGene_MSA")
