@@ -35,7 +35,7 @@ class BuildTree():
 
     def _merge_protein(self,dir):
         os.chdir(dir)
-        cmd = 'cat * > all.fas'
+        cmd = 'cat * > ../all.fas'
         self._run_command(cmd)
         os.chdir("../")
 
@@ -82,7 +82,7 @@ class BuildTree():
                 os.chdir(dir)
         if "SingleCopyOrthogroups.txt" in os.listdir():
             self._get_SingleID("SingleCopyOrthogroups.txt")
-            self._get_SingleGeneSeq("Orthogroups.txt","../all.fas")
+            self._get_SingleGeneSeq("Orthogroups.txt","../../all.fas")
 
     def _MSA_SingleCopyGene(self):
         os.mkdir("SingleGene_MSA")
