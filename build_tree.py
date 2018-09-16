@@ -28,18 +28,18 @@ class BuildTree():
     def __init__(self, *args):
         self.args = args
     
-    def _run_command(self,cmd):
+    def _run_command(self, cmd):
         return_code = subprocess.call(cmd, shell=True)
         if return_code != 0:
             print("ERROR: Return code {0} when running the following command: {1}".format(return_code, cmd))
 
-    def _merge_protein(self,dir):
+    def _merge_protein(self, dir):
         os.chdir(dir)
         cmd = 'cat * > ../all.fas'
         self._run_command(cmd)
         os.chdir("../")
 
-    def _orthofinder(self,dir):
+    def _orthofinder(self, dir):
         cmd = BuildTree.orthofinder + ' -f ' + dir
         self._run_command(cmd)
 
@@ -105,7 +105,7 @@ class BuildTree():
                 for seq_record in SeqIO.parse(file, 'fasta'):
                     D[seq_record.id] += str(seq_record.seq)
 
-        with open("merged_allSingleGenes.fas","w") as f:
+        with open("merged_allSingleGenes.fas", "w") as f:
             for key,value in D:
                 fh.write(">" + key + "\n" + value + "\n")
         os.chdir("../")
