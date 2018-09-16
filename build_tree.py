@@ -23,6 +23,7 @@ class BuildTree():
     SpeciesID = []
     SingleOrtho = []
     OrthoDict = OrderedDict()
+    SeqDict = OrderedDict()
     
     def __init__(self, *args):
         self.args = args
