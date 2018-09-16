@@ -23,7 +23,6 @@ class BuildTree():
     SpeciesID = []
     SingleOrtho = []
     OrthoDict = OrderedDict()
-    SeqDict = OrderedDict()
     
     def __init__(self, *args):
         self.args = args
@@ -103,7 +102,7 @@ class BuildTree():
         for file in os.listdir():
             if file.split('_')[-1] == "trimed.fas":
                 for seq_record in SeqIO.parse(file, 'fasta'):
-                    BuildTree.SeqDict[seq_record.id] += seq_record.seq
+                    D[seq_record.id] += seq_record.seq
 
         with open("merged_allSingleGenes.fas","w") as f:
             for key,value in D:
