@@ -106,7 +106,7 @@ class BuildTree():
                     D[seq_record.id] += str(seq_record.seq)
 
         with open("merged_allSingleGenes.fas", "w") as f:
-            for key,value in D:
+            for key,value in D.items():
                 fh.write(">" + key + "\n" + value + "\n")
         os.chdir("../")
 
