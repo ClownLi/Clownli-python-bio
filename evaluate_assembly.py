@@ -60,7 +60,7 @@ def Nxx(percentage):
         if sum_base < N:
             i += 1
         else:
-            return contig_length_sort[i]
+            return contig_length_sort[i], i+1
             break
 
 
@@ -84,11 +84,12 @@ def main():
     print('Min length: %d' % min(contig_length))
     print('Max length: %d' % max(contig_length))
     print('Total size: %d' % sum(contig_length))
-    print('N90: %d' % N90)
-    print('N80: %d' % N80)
-    print('N70: %d' % N70)
-    print('N60: %d' % N60)
-    print('N50: %d' % N50)
+    print('N90: %d' % N90[0])
+    print('N80: %d' % N80[0])
+    print('N70: %d' % N70[0])
+    print('N60: %d' % N60[0])
+    print('N50: %d' % N50[0])
+    print('L50: %d' % N50[1])    
     print('Average length: %d' % average_length)
     print('Total number (>500bp): %d' % num500)
     print('Total number (>2000bp): %d' % num2000)
