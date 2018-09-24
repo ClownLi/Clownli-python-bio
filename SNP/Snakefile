@@ -1,0 +1,101 @@
+##############################################################################################
+#SNP analysis of a single sample
+#Author:LMZ
+#Date:2018_09-24
+#thank Ma
+##############################################################################################
+
+GENOME_FA = "genome/chr1.fa"
+DICT = "genome/chr1.dict"
+PICARD = "/home/lina/miniconda3/share/picard-2.18.14-0/picard.jar"
+GATK = "/home/lina/software/GenomeAnalysisTK.jar"
+
+fq1 = "raw_data/read1.fq"
+fq2 = "raw_data/read2.fq"
+
+rule all:
+    input:
+        DICT,
+        "result/sample.samtools.raw.vcf",
+        "result/sample.gatk.raw.vcf"
+
+rule BwaAlignment:
+    input:
+        genome_fa = GENOME_FA,
+        data1 = fq1,
+        data2 = fq2,
+    output:
+        sam = "temp/sample.sam",
+        dict = DICT,
+    shell:
+        """bwa index {input.genome_fa} && samtools faidx {input.genome_fa} && bwa mem -t 24 -R "@RG\\tID:<ID>\\tLB:<LIBRARY_78>\\tSM:<78>\\tPL:ILLUMINA" {input.genome_fa} {input.data1} {input.data2} > {output.sam} && java -jar {PICARD} CreateSequenceDictionary R={input.genome_fa} O={output.dict}"""
+
+rule ToBam:
+    input:
+        "temp/sample.sam"
+    output:
+        "temp/sample.bam"
+    shell:
+        "samtools view -bS {input} -o {output}"
+
+rule SortBam:
+    input:
+        "temp/sample.bam"
+    output:
+        "temp/sample.sort.bam"
+    shell:
+        "java -jar {PICARD} SortSam I={input} O={output} SORT_ORDER=coordinate"
+
+rule Addhead:
+    input:
+        "temp/sample.sort.bam"
+    output:
+        "temp/sample.sort.addhead.bam"
+    shell:
+        "java -jar {PICARD} AddOrReplaceReadGroups I={input} O={output} ID=sampleID LB=sampleID PL=illumina PU=samplePU SM=sample"
+
+rule MarkDuplicates:
+    input:
+        "temp/sample.sort.addhead.bam"
+    output:
+        file1 = "temp/sample.rmdup.bam",
+        file2 = "temp/sample.sort.addhead.bam.metrics"
+    shell:
+        "java  -Xmx15g -jar {PICARD} MarkDuplicates I={input} O={output.file1} REMOVE_DUPLICATES=false  MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=1000 METRICS_FILE={output.file2}"
+
+rule LocalRealignment:
+    input:
+        genome_fa = GENOME_FA,
+        R = "temp/sample.rmdup.bam"
+    output:
+        "temp/sample.realign.intervals"
+    shell:
+        "samtools index {input.R} && java -Xmx50g -jar {GATK} -R {input.genome_fa} -T RealignerTargetCreator -I {input.R} -o {output}"
+
+rule IndelRealigner:
+    input:
+        genome_fa = GENOME_FA,
+        rmdup = "temp/sample.rmdup.bam",
+        intervals = "temp/sample.realign.intervals"
+    output:
+        "temp/sample.realign.bam"
+    shell:
+        "java -Xmx50g -jar {GATK} -R {input.genome_fa} -T IndelRealigner -targetIntervals {input.intervals} -I {input.rmdup} -o {output}"
+
+rule HaplotypeCaller:
+    input:
+        genome_fa = GENOME_FA,
+        realign = "temp/sample.realign.bam"
+    output:
+        "result/sample.gatk.raw.vcf"
+    shell:
+        "java -Xmx50g -jar {GATK} -R {input.genome_fa} -T HaplotypeCaller -I {input.realign} -o {output} -stand_call_conf 30"
+
+rule CallSnp:
+    input:
+        genome_fa = GENOME_FA,
+        file = "temp/sample.realign.bam"
+    output:
+        "result/sample.samtools.raw.vcf"
+    shell:
+        "samtools index {input.file} && samtools mpileup  -s -t DP -t AD -t ADF -t ADR -t INFO/AD -t SP -uvmFOB -C 50 -f {input.genome_fa} {input.file} | bcftools view --types snps,indels - > {output}"

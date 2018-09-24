@@ -1,0 +1,4 @@
+1、Create a raw_data directory to store data files
+2、Create a genome directory to store genome data files
+3、Modify the parameters in the Snakefile
+4、snakemake～～
