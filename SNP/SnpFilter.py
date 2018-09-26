@@ -17,10 +17,10 @@ def AddHeader(file1, file2):
             con = fr.readlines()
             for line in con:
                 line = line.strip()
-                if i[0] == "#":
+                if line[0] == "#":
                     fw.write(line + '\n')
 
-def FirstDeal():
+def FirstDeal(samtool, gatk):
     first_deal = []
     for x in samtool:
         for y in gatk:
@@ -50,7 +50,7 @@ def main():
     samtool = get_line(args.input1)
     gatk = get_line(args.input2)
     AddHeader(args.input2, args.output)
-    firstdeal = FirstDeal()
+    firstdeal = FirstDeal(samtool, gatk)
     SecondDeal(firstdeal)
     AddResult(args.output)
 
