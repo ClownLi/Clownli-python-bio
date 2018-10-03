@@ -1,4 +1,7 @@
 '''
+author:LMZ
+Date:2018-10-03
+
 Deletion criteria：
 a.Samtools.vcf and gatk.vcf have overlapping parts, take gatk.vcf inside
 b.5 <= DP <= 100
