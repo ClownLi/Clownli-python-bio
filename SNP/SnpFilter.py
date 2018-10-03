@@ -1,3 +1,9 @@
+'''
+Deletion criteria：
+a.Samtools.vcf and gatk.vcf have overlapping parts, take gatk.vcf inside
+b.5 <= DP <= 100
+c.SNP distance (default 5 bp)
+'''
 import argparse
 
 
@@ -30,18 +36,18 @@ def FirstDeal(samtool, gatk):
                     first_deal.append(y)
     return first_deal
 
-def SecondDeal(List):
+def SecondDeal(file, List):
+    result = []
     for i in range(len(List)-1):
         if int(List[i+1].split('\t')[1]) - int(List[i].split('\t')[1]) <= 5:
-            List.remove(List[i+1])
-
-def AddResult(file):
+            result.append(List[i+1])
     with open(file, 'a+') as f:
-        for i in first_deal:
-            f.write(i + '\n')
+        for i in List:
+            if i not in result:
+            	f.write(i + '\n')
 
 def main():
-    parser = argparse.ArgumentParser(description="For example: python filter_snp.py -i1 sample.sample.samtools.raw.vcf -i2 sample.gatk.raw.vcf -o gatk_filter.vcf")
+    parser = argparse.ArgumentParser(description="For example: python filter_snp.py -i1 sample.samtools.raw.vcf -i2 sample.gatk.raw.vcf -o gatk_filter.vcf")
     parser.add_argument("-i1", "--input1", metavar='', type=str, required=True, help="sample.samtools.raw.vcf")
     parser.add_argument("-i2", "--input2", metavar='', type=str, required=True, help="sample.gatk.raw.vcf")
     parser.add_argument("-o", "--output", metavar='', type=str, required=True, help="gatk_filter.vcf")
@@ -51,8 +57,7 @@ def main():
     gatk = get_line(args.input2)
     AddHeader(args.input2, args.output)
     firstdeal = FirstDeal(samtool, gatk)
-    SecondDeal(firstdeal)
-    AddResult(args.output)
+    SecondDeal(args.output, firstdeal)
 
 if __name__ == "__main__":
     main()
